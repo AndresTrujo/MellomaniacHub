@@ -3,6 +3,7 @@ package com.trujo.mellomaniachub;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +22,7 @@ import com.squareup.picasso.Picasso;
 import com.trujo.mellomaniachub.models.Album;
 import com.trujo.mellomaniachub.models.AlbumResponse;
 import com.trujo.mellomaniachub.models.AppDatabase;
+import com.trujo.mellomaniachub.models.Artist;
 import com.trujo.mellomaniachub.models.ArtistReponse;
 import com.trujo.mellomaniachub.models.UserAlbum;
 
@@ -38,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText searchEditText;
     private Button searchButton;
     private RecyclerView albumsRecyclerView;
-    private TheAudioDBService apiService;
+    private TheAudioDBService service;
     private AlbumsAdapter albumsAdapter;
     private AppDatabase db;
 
@@ -62,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
                 .baseUrl(TheAudioDBService.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-        apiService = retrofit.create(TheAudioDBService.class);
+        service = retrofit.create(TheAudioDBService.class);
 
         // Inicializar la base de datos de Room
         db = AppDatabase.getDatabase(this);
@@ -73,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String artistName = searchEditText.getText().toString().trim();
                 if (!artistName.isEmpty()) {
-                    searchArtists(artistName);
+                    searchArtist(artistName);
                 } else {
                     Toast.makeText(MainActivity.this, "Por favor, ingresa un artista", Toast.LENGTH_SHORT).show();
                 }
@@ -81,44 +83,74 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void searchArtists(String artistName) {
-        // Llamar a la API para buscar artistas
-        apiService.searchArtists(artistName).enqueue(new Callback<ArtistReponse>() {
+    private void searchArtist(String artistName) {
+        service.searchArtists(artistName).enqueue(new Callback<ArtistReponse>() {
             @Override
             public void onResponse(Call<ArtistReponse> call, Response<ArtistReponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().getArtists() != null && !response.body().getArtists().isEmpty()) {
-                    String artistId = response.body().getArtists().get(0).getIdArtist();
-                    getAlbumsByArtistId(artistId);
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Artist> artists = response.body().getArtists();
+                    if (artists != null && !artists.isEmpty()) {
+                        Artist artist = artists.get(0);
+                        // Log para depuración, puedes quitarlo si quieres
+                        Log.d("MainActivity", "Artista encontrado: " + artist.getName());
+                        getAlbumsForArtist(artist.getName()); // Usamos el ID del artista para buscar sus álbumes
+                    } else {
+                        Log.d("MainActivity", "Artista no encontrado.");
+                        Toast.makeText(MainActivity.this, "Artista no encontrado", Toast.LENGTH_SHORT).show();
+                        albumsAdapter.setAlbums(new ArrayList<>()); // Limpiar resultados anteriores
+                    }
                 } else {
-                    Toast.makeText(MainActivity.this, "Artista no encontrado", Toast.LENGTH_SHORT).show();
-                    albumsAdapter.setAlbums(new ArrayList<>());
+                    Log.e("MainActivity", "Error en la respuesta de búsqueda de artista: " + response.code());
+                    Toast.makeText(MainActivity.this, "Error al buscar artista", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<ArtistReponse> call, Throwable t) {
-                Toast.makeText(MainActivity.this, "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                albumsAdapter.setAlbums(new ArrayList<>());
+                Log.e("MainActivity", "Error de red en búsqueda de artista: " + t.getMessage());
+                Toast.makeText(MainActivity.this, "Error de red", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void getAlbumsByArtistId(String artistId) {
-        // Llamar a la API para obtener los álbumes del artista
-        apiService.getAlbumsByArtistId(artistId).enqueue(new Callback<AlbumResponse>() {
+    private void getAlbumsForArtist(String artistQuery) { // Cambié el nombre del parámetro para reflejar que es una query (nombre o id según la API)
+        Log.d("MainActivity", "Buscando álbumes para la consulta: " + artistQuery);
+
+        // Usaremos fetchAlbumsByArtistQuery que definimos en la interfaz
+        service.fetchAlbumsByArtistQuery(artistQuery).enqueue(new Callback<AlbumResponse>() {
             @Override
             public void onResponse(Call<AlbumResponse> call, Response<AlbumResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().getAlbums() != null && !response.body().getAlbums().isEmpty()) {
-                    albumsAdapter.setAlbums(response.body().getAlbums());
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Album> albums = response.body().getAlbums(); // Esto debería ahora tener la lista completa
+                    if (albums != null && !albums.isEmpty()) {
+                        Log.d("MainActivity", "Álbumes encontrados: " + albums.size());
+                        for (Album album : albums) {
+                            Log.d("MainActivity", "Álbum: " + album.getAlbumName() + " - Artista: " + album.getArtistName());
+                        }
+                        albumsAdapter.setAlbums(albums);
+                    } else {
+                        Log.d("MainActivity", "No se encontraron álbumes para este artista o la lista está vacía.");
+                        Toast.makeText(MainActivity.this, "No se encontraron álbumes", Toast.LENGTH_SHORT).show();
+                        albumsAdapter.setAlbums(new ArrayList<>());
+                    }
                 } else {
-                    Toast.makeText(MainActivity.this, "No se encontraron álbumes para este artista.", Toast.LENGTH_SHORT).show();
+                    Log.e("MainActivity", "Error al obtener los álbumes, código: " + response.code() + ", mensaje: " + response.message());
+                    try {
+                        if (response.errorBody() != null) {
+                            Log.e("MainActivity", "Error body: " + response.errorBody().string());
+                        }
+                    } catch (Exception e) {
+                        Log.e("MainActivity", "Error al leer errorBody", e);
+                    }
+                    Toast.makeText(MainActivity.this, "Error al obtener álbumes", Toast.LENGTH_SHORT).show();
                     albumsAdapter.setAlbums(new ArrayList<>());
                 }
             }
 
             @Override
             public void onFailure(Call<AlbumResponse> call, Throwable t) {
-                Toast.makeText(MainActivity.this, "Error al obtener los álbumes: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("MainActivity", "Error de red al obtener álbumes: " + t.getMessage(), t);
+                Toast.makeText(MainActivity.this, "Error de red al obtener álbumes", Toast.LENGTH_SHORT).show();
                 albumsAdapter.setAlbums(new ArrayList<>());
             }
         });
@@ -132,8 +164,12 @@ public class MainActivity extends AppCompatActivity {
             this.albums = albums;
         }
 
+
         public void setAlbums(List<Album> newAlbums) {
-            this.albums = newAlbums;
+            this.albums.clear();
+            if (newAlbums != null) {
+                this.albums.addAll(newAlbums);
+            }
             notifyDataSetChanged();
         }
 
@@ -153,12 +189,12 @@ public class MainActivity extends AppCompatActivity {
             if (album.getAlbumThumb() != null && !album.getAlbumThumb().isEmpty()) {
                 Picasso.get().load(album.getAlbumThumb()).into(holder.albumImage);
             } else {
-                holder.albumImage.setImageResource(R.drawable.ic_launcher_background); // Placeholder
+                // Considera usar un placeholder más genérico o específico para álbumes sin carátula
+                holder.albumImage.setImageResource(R.drawable.ic_launcher_background);
             }
 
             // Listener para agregar el álbum a la base de datos
             holder.addButton.setOnClickListener(v -> {
-                // Convertir el objeto de la API a una entidad de Room
                 UserAlbum userAlbum = new UserAlbum();
                 userAlbum.idAlbum = album.getIdAlbum();
                 userAlbum.albumName = album.getAlbumName();
@@ -166,15 +202,13 @@ public class MainActivity extends AppCompatActivity {
                 userAlbum.genre = album.getGenre();
                 userAlbum.yearReleased = album.getYearReleased();
                 userAlbum.albumThumb = album.getAlbumThumb();
-                userAlbum.status = "to-listen";
+                userAlbum.status = "to-listen"; // O el estado inicial que desees
 
-                // Insertar en la base de datos en un hilo de fondo
                 new InsertAlbumTask().execute(userAlbum);
             });
 
             // Listener para abrir la vista de detalle
             holder.itemView.setOnClickListener(v -> {
-                // Prepara el objeto UserAlbum para la vista de detalle
                 UserAlbum userAlbum = new UserAlbum();
                 userAlbum.idAlbum = album.getIdAlbum();
                 userAlbum.albumName = album.getAlbumName();
@@ -182,10 +216,9 @@ public class MainActivity extends AppCompatActivity {
                 userAlbum.genre = album.getGenre();
                 userAlbum.yearReleased = album.getYearReleased();
                 userAlbum.albumThumb = album.getAlbumThumb();
-                userAlbum.status = "to-listen";
 
                 Intent intent = new Intent(MainActivity.this, AlbumDetailActivity.class);
-                intent.putExtra("album", userAlbum);
+                intent.putExtra("album", userAlbum); // Asegúrate que UserAlbum sea Parcelable o Serializable
                 startActivity(intent);
             });
         }

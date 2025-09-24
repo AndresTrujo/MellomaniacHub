@@ -6,46 +6,27 @@ public class Album {
     private String idAlbum;
 
     @SerializedName("strAlbum")
-    private String albumName;
-
-    @SerializedName("strGenre")
-    private String genre;
-
-    @SerializedName("intYearReleased")
-    private String yearReleased;
+    private String strAlbum; // Nombre del álbum
 
     @SerializedName("strArtist")
-    private String artistName;
+    private String strArtist; // Nombre del artista
+
+    @SerializedName("intYearReleased")
+    private String intYearReleased; // Año de lanzamiento
+
+    @SerializedName("strGenre")
+    private String strGenre; // Género
 
     @SerializedName("strAlbumThumb")
-    private String albumThumb;
+    private String strAlbumThumb; // URL de la miniatura del álbum
 
     // Getters
-    public String getIdAlbum(){
-        return idAlbum;
-    }
+    public String getIdAlbum() { return idAlbum; }
+    public String getAlbumName() { return strAlbum; } // Método renombrado para claridad
+    public String getArtistName() { return strArtist; } // Método renombrado para claridad
+    public String getYearReleased() { return intYearReleased; } // Método renombrado para claridad
+    public String getGenre() { return strGenre; }
+    public String getAlbumThumb() { return strAlbumThumb; }
 
-    public String getAlbumName() {
-        return albumName;
-    }
 
-    public String getArtistName() {
-        return artistName;
-    }
-
-    public String getYearReleased() {
-        return yearReleased;
-    }
-
-    public String getAlbumThumb() {
-        return albumThumb;
-    }
-
-    public String getGenre() {
-        return genre;
-    }
-
-    public void setGenre(String genre) {
-        this.genre = genre;
-    }
 }
