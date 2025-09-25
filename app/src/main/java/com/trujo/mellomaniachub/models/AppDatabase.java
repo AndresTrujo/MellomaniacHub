@@ -6,7 +6,7 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {UserAlbum.class, AlbumList.class, AlbumListItem.class}, version = 2, exportSchema = false)
+@Database(entities = {UserAlbum.class, AlbumList.class, AlbumListItem.class}, version = 3, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     public abstract AlbumDao albumDao();
@@ -21,7 +21,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, "music_database")
-                            .fallbackToDestructiveMigration() // Importante para cambios de esquema sin migraciones explícitas
+                            .fallbackToDestructiveMigration() // Destroys and recreates database on version upgrade if no migration found
                             .build();
                 }
             }
