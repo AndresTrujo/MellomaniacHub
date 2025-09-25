@@ -2,14 +2,17 @@ package com.trujo.mellomaniachub.models;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
 import java.util.List;
 
 @Dao
 public interface AlbumDao {
-    @Insert
-    void insertAlbum(UserAlbum album);
+    // Inserta si es nuevo, reemplaza si ya existe (basado en la PrimaryKey de UserAlbum)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void upsertAlbum(UserAlbum album);
+
     @Query("SELECT * FROM user_albums WHERE status = 'to-listen'")
     List<UserAlbum> getAlbumsToListen();
 
@@ -19,8 +22,9 @@ public interface AlbumDao {
     @Query("SELECT * FROM user_albums WHERE idAlbum = :albumId LIMIT 1")
     UserAlbum getAlbumById(String albumId);
 
-    @Query("UPDATE user_albums SET userRating = :rating, userReview = :review WHERE idAlbum = :albumId")
-    void updateAlbum(String albumId, float rating, String review);
+    // Actualiza campos específicos. Considera si upsertAlbum cubre tus necesidades o si este sigue siendo útil.
+    @Query("UPDATE user_albums SET userRating = :rating, userReview = :review, status = :status WHERE idAlbum = :albumId")
+    void updateAlbumDetails(String albumId, float rating, String review, String status);
 
     @Query("DELETE FROM user_albums WHERE idAlbum = :albumId")
     void deleteAlbum(String albumId);

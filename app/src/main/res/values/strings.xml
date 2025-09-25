@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Mellomaniac Hub</string>
+    <string name="title_buscar">Buscar</string>
+    <string name="title_listas">Listas</string>
 </resources>

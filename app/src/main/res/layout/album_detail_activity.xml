@@ -46,6 +46,18 @@
             android:gravity="center"
             android:layout_marginBottom="16dp"/>
 
+        <!-- Release Year -->
+        <TextView
+            android:id="@+id/album_release_year_detail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Año de Lanzamiento"
+            android:textSize="16sp"
+            android:textColor="#999999"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"/>
+
         <!-- Puntuación de Estrellas -->
         <TextView
             android:layout_width="wrap_content"
@@ -57,7 +69,6 @@
 
         <RatingBar
             android:id="@+id/user_rating_bar"
-            style="?android:attr/ratingBarStyleIndicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:numStars="5"
